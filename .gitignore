@@ -1,0 +1,47 @@
+# Dependency directories
+/node_modules
+/.pnp
+.pnp.js
+
+# Production build
+/build
+/dist
+
+# Compiled output
+*.log
+*.zip
+*.gz
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE / Editor specific files
+.idea
+.vscode
+*.sublime-project
+*.sublime-workspace
+
+# Mac specific
+.DS_Store
+
+# npm package files
+package-lock.json
+yarn.lock
+
+# ESLint cache
+.eslintcache
+
+# Jest coverage directory
+/coverage
+
+# Next.js build output
+/.next
+
+# Storybook build output
+/storybook-static
+
+# Custom
+/*.log
