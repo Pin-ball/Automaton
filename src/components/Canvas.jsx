@@ -1,125 +1,138 @@
-import { mouseGridCell, drawCells, drawFigure } from '@src/utils';
-import { updateParam} from '@src/store/reducer/automata.js';
-import useWindowSize from '@src/hooks/useWindowSize.jsx';
-import { useDispatch, useSelector } from 'react-redux';
-import { useEffect, useRef, useState } from 'react';
-import Points from "@src/assets/Points.png";
-import PropTypes from 'prop-types';
+import PointsBackground from "@src/assets/points_background.png";
+import useWindowSize from "@src/hooks/useWindowSize.jsx";
+import { updateParam } from "@src/store/reducer/automata.js";
+import { drawCells, drawFigure, mouseGridCell } from "@src/utils";
+import PropTypes from "prop-types";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-let ctx = null
-let drag = {startPoint: null, startCanvasOffset: null}
+let ctx = null;
+let drag = { startPoint: null, startCanvasOffset: null };
 
-// TODO: Add 'selection' mode
-export default function Canvas({cells, action}) {
-  // console.log('--> Refresh: Canvas')
-  const dispatch = useDispatch()
-  const state = useSelector(store => store.automata)
-  const canvasRef = useRef(null)
-  const [cursor, setCursor] = useState(null)
+// TODO: Add "drawn pattern selection" mode
+export default function Canvas({ cells, action }) {
+  // console.log(">> Refresh: Canvas");
+
+  const dispatch = useDispatch();
+  const canvasRef = useRef(null);
   const [width, height] = useWindowSize();
-
+  const [cursor, setCursor] = useState(null);
+  const state = useSelector((store) => store.automata);
+  const showBackground =
+    Object.keys(cells).length <= 0 && state.running === false;
 
   useEffect(() => {
-    ctx = canvasRef.current.getContext('2d')
+    ctx = canvasRef.current.getContext("2d");
   }, []);
 
-
   useEffect(() => {
-    draw()
+    draw();
   }, [state.params, cells, cursor, width, height]);
 
-
   const draw = () => {
-    drawCells(ctx, canvasRef, cells, state.params)
-    drawFigure(ctx, canvasRef, cursor, state.params)
-  }
-
+    drawCells(ctx, canvasRef, cells, state.params);
+    drawFigure(ctx, canvasRef, cursor, state.params);
+  };
 
   // Canvas Actions
   function mouseDown(e) {
-    drag.startPoint = [e.clientX, e.clientY]
-    drag.startCanvasOffset = state.params.offset
+    drag.startPoint = [e.clientX, e.clientY];
+    drag.startCanvasOffset = state.params.offset;
   }
 
   function mouseMove(e) {
-    const previousPosition = cursor
-    setCursor([e.clientX, e.clientY])
+    const previousPosition = cursor;
+    setCursor([e.clientX, e.clientY]);
 
-    if (drag.startPoint === null) return
+    if (drag.startPoint === null) return;
 
     switch (state.params.tool) {
       case 1:
-        mouseDraw([e.clientX, e.clientY], previousPosition)
-        break
+        mouseDraw([e.clientX, e.clientY], previousPosition);
+        break;
       default: {
-        const {startPoint: [xPoint, yPoint], startCanvasOffset: [xOffset, yOffset]} = drag
-        dispatch(updateParam({
-          param: 'offset',
-          value: [xOffset + (e.clientX - xPoint) / state.params.zoom, yOffset +(e.clientY - yPoint) / state.params.zoom]
-      }))
-        break
+        const {
+          startPoint: [xPoint, yPoint],
+          startCanvasOffset: [xOffset, yOffset],
+        } = drag;
+        dispatch(
+          updateParam({
+            param: "offset",
+            value: [
+              xOffset + (e.clientX - xPoint) / state.params.zoom,
+              yOffset + (e.clientY - yPoint) / state.params.zoom,
+            ],
+          })
+        );
+        break;
       }
     }
   }
 
   function mouseUp(e) {
-    mouseClick([e.clientX, e.clientY])
-    drag.startPoint = null
-    drag.startCanvasOffset = null
+    mouseClick([e.clientX, e.clientY]);
+    drag.startPoint = null;
+    drag.startCanvasOffset = null;
   }
 
   function mouseLeave() {
-    setCursor(null)
-    drag.startPoint = null
-    drag.startCanvasOffset = null
+    setCursor(null);
+    drag.startPoint = null;
+    drag.startCanvasOffset = null;
   }
 
   function mouseClick(cursor) {
-    if (isMouseDrag()) return
+    if (isMouseDrag()) return;
 
-    const cell = mouseGridCell(canvasRef, cursor, state.params)
-    action(cell)
+    const cell = mouseGridCell(canvasRef, cursor, state.params);
+    action(cell);
   }
 
   function mouseDraw(cursor, previousCursor) {
-    const cell = mouseGridCell(canvasRef, cursor, state.params)
-    const previousCell = mouseGridCell(canvasRef, previousCursor, state.params)
-    action(cell, previousCell)
+    const cell = mouseGridCell(canvasRef, cursor, state.params);
+    const previousCell = mouseGridCell(canvasRef, previousCursor, state.params);
+    action(cell, previousCell);
   }
 
   function isMouseDrag() {
-    if (!drag.startPoint) return true
+    if (!drag.startPoint) return true;
 
-    const [xDrag, yDrag] = drag.startCanvasOffset
-    const [xOffset, yOffset] = state.params.offset
-    return xDrag < xOffset - 3 || xDrag > xOffset + 3 || yDrag < yOffset - 3 || yDrag > yOffset + 3;
+    const [xDrag, yDrag] = drag.startCanvasOffset;
+    const [xOffset, yOffset] = state.params.offset;
+    return (
+      xDrag < xOffset - 3 ||
+      xDrag > xOffset + 3 ||
+      yDrag < yOffset - 3 ||
+      yDrag > yOffset + 3
+    );
   }
-
 
   return (
     <>
-      {/* TODO: To refactor */}
-      {Object.keys(cells).length <= 0 && state.running === false
-        ? < img src={Points} className='m-auto h-full p-4 absolute left-0 left-1/2 transform -translate-x-1/2' alt='Points'/>
-        : null
-      }
+      {showBackground && (
+        <img
+          src={PointsBackground}
+          className="absolute left-0 h-full p-4 m-auto transform -translate-x-1/2 left-1/2"
+          alt="Canvas background"
+        />
+      )}
 
       <canvas
-        className='w-full h-full absolute top-0 left-0'
+        className="absolute top-0 left-0 w-full h-full"
         ref={canvasRef}
         width={canvasRef?.current?.clientWidth}
         height={canvasRef?.current?.clientHeight}
         onMouseDown={mouseDown}
         onMouseMove={mouseMove}
         onMouseUp={mouseUp}
-        onMouseLeave={mouseLeave}>
-      </canvas>
+        onMouseLeave={mouseLeave}
+      ></canvas>
     </>
-  )
+  );
 }
 
-Canvas.displayName = 'Canvas';
+Canvas.displayName = "Canvas";
 Canvas.propTypes = {
   cells: PropTypes.object,
-  action: PropTypes.func
-}
+  action: PropTypes.func,
+};

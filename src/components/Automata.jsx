@@ -1,76 +1,80 @@
-import { cellsCount, incLoop, refresh } from "@src/store/reducer/automata.js";
-import { useDispatch, useSelector } from "react-redux";
-import { Box, Canvas, Warning } from "@src/components";
+import Box from "@src/components/Box";
+import Canvas from "@src/components/Canvas";
 import useCells from "@src/components/Cells.jsx";
+import Warning from "@src/components/Warning";
+import { cellsCount, incLoop, refresh } from "@src/store/reducer/automata.js";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-let isFirstRender = true
+const maxSpeedFlags = 5;
+let isFirstRender = true;
 
 export default function Automata() {
-  // console.log('--> Refresh: Automata')
-  const {cells, action, cycle, reset} = useCells()
-  const dispatch = useDispatch()
-  const state = useSelector(store => store.automata)
-  const [speedFlag, setSpeedFlag] = useState(0)
+  // console.log(">> Refresh: Automata");
 
+  const dispatch = useDispatch();
+  const [speedFlags, setSpeedFlags] = useState(0);
+  const { cells, action, cycle, reset } = useCells();
+  const state = useSelector((store) => store.automata);
 
-  // TODO: To refactor
   useEffect(() => {
-    const c = Object.values(cells)
-    dispatch(cellsCount({count: c.filter(c => c >= 1).length}))
+    dispatch(
+      cellsCount({ count: Object.values(cells).filter((c) => c >= 1).length })
+    );
   }, cells.length);
 
-
   useEffect(() => {
-    if (!state.running) return
+    if (!state.running) return;
 
-    dispatch(incLoop())
-    const elapsedTime = cycle()
+    dispatch(incLoop());
+    const elapsedTime = cycle();
     const delay = Math.max(0, 1000 / state.params.delta - elapsedTime);
-    const timer = setTimeout(()=>{ dispatch(refresh()) }, delay)
+    const timer = setTimeout(() => {
+      dispatch(refresh());
+    }, delay);
 
     if (elapsedTime > 1000 / state.params.delta) {
-      console.log("(", elapsedTime, "ms) Cycle processing time exceeded (", Object.keys(cells).length, "cells)")
-      setSpeedFlag(s => s + 1)
-    }
-    else if(speedFlag > 0) {
-      setSpeedFlag(0)
+      // console.log(`(${elapsedTime}ms) Cycle processing time exceeded (${Object.keys(cells).length}cells)`);
+      setSpeedFlags((s) => s + 1);
+    } else if (speedFlags > 0) {
+      setSpeedFlags(0);
     }
 
-    return () => { clearTimeout(timer) }
+    return () => {
+      clearTimeout(timer);
+    };
   }, [state.running, state.refresh]);
-
 
   useEffect(() => {
     if (isFirstRender || state.running) return;
-    dispatch(incLoop())
-    cycle()
+    dispatch(incLoop());
+    cycle();
   }, [state.refresh]);
 
-
   useEffect(() => {
-    if (isFirstRender) return
-    reset()
+    if (isFirstRender) return;
+    reset();
   }, [state.reset]);
 
-  // TODO: Create visual warning for user
   useEffect(() => {
-    if (speedFlag > 5 )
-      console.log('slowness detected, please slow down or reset the simulation')
-  }, [speedFlag]);
-
+    if (speedFlags > maxSpeedFlags)
+      console.log(
+        "slowness detected, please slow down or reset the simulation"
+      );
+  }, [speedFlags]);
 
   useEffect(() => {
-    isFirstRender = false
+    isFirstRender = false;
   }, []);
 
   return (
-    <Box padding={false} className='grow overflow-hidden relative'>
-      <Canvas cells={cells} action={action}/>
-      { speedFlag > 5
-        ? <Warning>Slowness detected, please slow down or reset the simulation</Warning>
-        : null
-      }
+    <Box padding={false} className="relative overflow-hidden grow">
+      <Canvas cells={cells} action={action} />
+      {speedFlags > maxSpeedFlags ? (
+        <Warning>
+          Slowness detected, please slow down or reset the simulation
+        </Warning>
+      ) : null}
     </Box>
-  )
+  );
 }

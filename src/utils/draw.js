@@ -1,34 +1,36 @@
-import {cellSize, POINTER, STAMPS} from "../Config.js";
-import {mousePositionOnGrid} from './position.js'
-import {lerpColorRGB} from "./color.js";
+import { cellSize, POINTER, STAMPS } from "../Config.js";
+import { lerpColorRGB } from "./color.js";
+import { mousePositionOnGrid } from './position.js';
 
 export function drawCells(ctx, canvas, cells, params) {
-  ctx.clearRect(0, 0, ctx.canvas.clientWidth, ctx.canvas.clientHeight)
-  ctx.fillStyle = params.color
-  ctx.beginPath()
+  const width = canvas.current.clientWidth;
+  const height = canvas.current.clientHeight;
+  const { zoom, offset: [xOffset, yOffset], color } = params;
+  const halfW = width / 2;
+  const halfH = height / 2;
+  const size = cellSize * zoom;
 
-  const [xCenter, yCenter] = [canvas.current.clientWidth/2, canvas.current.clientHeight/2]
-  const [xOffset, yOffset] = params.offset
+  ctx.clearRect(0, 0, width, height);
 
-  for (let cell of Object.keys(cells)) {
-    const [xCell,yCell] = cell.split(':').map(c => parseInt(c))
-    const [x, y] = [
-      xCenter + xCell*cellSize*params.zoom + xOffset*params.zoom,
-      yCenter + yCell*cellSize*params.zoom + yOffset*params.zoom
-    ]
-
-    if (
-      x > -cellSize && x < canvas.current.clientWidth &&
-      y > -cellSize && y < canvas.current.clientHeight
-    ) {
-      const cellValue = cells[cell]
-      ctx.fillStyle = cellValue === 1 ? params.color : lerpColorRGB([250, 50, 50], [30, 30, 30], cellValue)
-      ctx.fillRect(x, y, cellSize*params.zoom, cellSize*params.zoom)
-    }
-
-
+  if (Object.keys(cells).length === 0) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 1, 1);
+    return;
   }
-  ctx.fill()
+
+  for (const [pos, cellValue] of Object.entries(cells)) {
+    const [xCell, yCell] = pos.split(':').map(Number);
+    const x = halfW + xCell * size + xOffset * zoom;
+    const y = halfH + yCell * size + yOffset * zoom;
+
+    if (x > -cellSize && x < width && y > -cellSize && y < height) {
+      ctx.fillStyle =
+        cellValue === 1
+          ? color
+          : lerpColorRGB([250, 50, 50], [30, 30, 30], cellValue);
+      ctx.fillRect(x, y, size, size);
+    }
+  }
 
   // Display target
   // ctx.fillStyle = params.color
@@ -38,10 +40,10 @@ export function drawCells(ctx, canvas, cells, params) {
 
 export function drawFigure(ctx, canvas, cursor, params) {
   if (cursor === null) return
-  const [x,y] = mousePositionOnGrid(canvas, cursor, params)
+  const [x, y] = mousePositionOnGrid(canvas, cursor, params)
 
   ctx.fillStyle = '#FAFAFA50'
-  let figure = [[0,0]]
+  let figure = [[0, 0]]
   switch (params.tool) {
     case 2:
       figure = STAMPS.find(s => s.id === params.stamp).value
@@ -51,11 +53,11 @@ export function drawFigure(ctx, canvas, cursor, params) {
       break
   }
 
-  for(let [xFig, yFig] of figure) {
+  for (let [xFig, yFig] of figure) {
     ctx.fillRect(
-      x+xFig*cellSize*params.zoom,
-      y+yFig*cellSize*params.zoom,
-      cellSize*params.zoom,
-      cellSize*params.zoom)
+      x + xFig * cellSize * params.zoom,
+      y + yFig * cellSize * params.zoom,
+      cellSize * params.zoom,
+      cellSize * params.zoom)
   }
 }

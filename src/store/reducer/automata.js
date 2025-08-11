@@ -38,18 +38,18 @@ export const automata = createSlice({
         },
 
         toggleParam: (state, action) => {
-            const {param} = action.payload
+            const { param } = action.payload
             if (typeof state.params[param] === 'boolean')
                 state.params[param] = !state.params[param]
         },
 
         updateParam: (state, action) => {
-            const {param, value} = action.payload
+            const { param, value } = action.payload
             state.params[param] = value
         },
 
         cellsCount: (state, action) => {
-            const {count} = action.payload
+            const { count } = action.payload
             state.cells = count
         },
 

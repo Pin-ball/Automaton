@@ -20,7 +20,7 @@
     "react-dom": "^18.2.0",
     "react-redux": "^9.0.4",
     "react-use": "^17.5.0",
-    "rsuite": "^5.55.0",
+    "rsuite": "^5.83.3",
     "use-immer": "^0.9.0",
     "zustand": "^4.5.2"
   },
