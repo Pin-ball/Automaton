@@ -1,8 +1,5 @@
-import { drawCells, drawFigure } from './draw.js';
-import { exportPattern } from './pattern.js';
-import { mouseGridCell, mousePositionOnGrid } from './position.js';
+import { drawCells, drawFigure } from './draw.js'
+import { exportPattern } from './pattern.js'
+import { mouseGridCell, mousePositionOnGrid } from './position.js'
 
-export {
-  drawCells, drawFigure,
-  exportPattern, mouseGridCell, mousePositionOnGrid
-};
+export { drawCells, drawFigure, exportPattern, mouseGridCell, mousePositionOnGrid }

@@ -1,80 +1,42 @@
-import Box from "@src/components/Box";
-import Canvas from "@src/components/Canvas";
-import useCells from "@src/components/Cells.jsx";
-import Warning from "@src/components/Warning";
-import { cellsCount, incLoop, refresh } from "@src/store/reducer/automata.js";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import Box from '@src/components/Box'
+import Canvas from '@src/components/Canvas'
+import Warning from '@src/components/Warning'
+import { step } from '@src/store/reducer/automata.js'
+import { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
-const maxSpeedFlags = 5;
-let isFirstRender = true;
+const SLOW_TICKS_LIMIT = 5
 
 export default function Automata() {
-  // console.log(">> Refresh: Automata");
-
-  const dispatch = useDispatch();
-  const [speedFlags, setSpeedFlags] = useState(0);
-  const { cells, action, cycle, reset } = useCells();
-  const state = useSelector((store) => store.automata);
+  const dispatch = useDispatch()
+  const running = useSelector((store) => store.automata.running)
+  const delta = useSelector((store) => store.automata.params.delta)
+  const [slowTicks, setSlowTicks] = useState(0)
 
   useEffect(() => {
-    dispatch(
-      cellsCount({ count: Object.values(cells).filter((c) => c >= 1).length })
-    );
-  }, cells.length);
+    if (!running) return
 
-  useEffect(() => {
-    if (!state.running) return;
+    const interval = 1000 / delta
+    let timer
 
-    dispatch(incLoop());
-    const elapsedTime = cycle();
-    const delay = Math.max(0, 1000 / state.params.delta - elapsedTime);
-    const timer = setTimeout(() => {
-      dispatch(refresh());
-    }, delay);
-
-    if (elapsedTime > 1000 / state.params.delta) {
-      // console.log(`(${elapsedTime}ms) Cycle processing time exceeded (${Object.keys(cells).length}cells)`);
-      setSpeedFlags((s) => s + 1);
-    } else if (speedFlags > 0) {
-      setSpeedFlags(0);
+    function tick() {
+      const start = performance.now()
+      dispatch(step())
+      const elapsed = performance.now() - start
+      setSlowTicks((count) => (elapsed > interval ? count + 1 : 0))
+      timer = setTimeout(tick, Math.max(0, interval - elapsed))
     }
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [state.running, state.refresh]);
-
-  useEffect(() => {
-    if (isFirstRender || state.running) return;
-    dispatch(incLoop());
-    cycle();
-  }, [state.refresh]);
-
-  useEffect(() => {
-    if (isFirstRender) return;
-    reset();
-  }, [state.reset]);
-
-  useEffect(() => {
-    if (speedFlags > maxSpeedFlags)
-      console.log(
-        "slowness detected, please slow down or reset the simulation"
-      );
-  }, [speedFlags]);
-
-  useEffect(() => {
-    isFirstRender = false;
-  }, []);
+    tick()
+    return () => clearTimeout(timer)
+  }, [running, delta, dispatch])
 
   return (
-    <Box padding={false} className="relative overflow-hidden grow">
-      <Canvas cells={cells} action={action} />
-      {speedFlags > maxSpeedFlags ? (
-        <Warning>
-          Slowness detected, please slow down or reset the simulation
-        </Warning>
+    <Box padding={false} className="relative grow overflow-hidden">
+      <Canvas />
+      {slowTicks > SLOW_TICKS_LIMIT ? (
+        <Warning>Slowness detected, please slow down or reset the simulation</Warning>
       ) : null}
     </Box>
-  );
+  )
 }

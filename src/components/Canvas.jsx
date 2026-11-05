@@ -1,110 +1,99 @@
-import PointsBackground from "@src/assets/points_background.png";
-import useWindowSize from "@src/hooks/useWindowSize.jsx";
-import { updateParam } from "@src/store/reducer/automata.js";
-import { drawCells, drawFigure, mouseGridCell } from "@src/utils";
-import PropTypes from "prop-types";
-import { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-
-let ctx = null;
-let drag = { startPoint: null, startCanvasOffset: null };
+import PointsBackground from '@src/assets/points_background.png'
+import useElementSize from '@src/hooks/useElementSize.js'
+import { applyTool, updateParam } from '@src/store/reducer/automata.js'
+import { drawCells, drawFigure, mouseGridCell } from '@src/utils'
+import { useEffect, useRef, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 // TODO: Add "drawn pattern selection" mode
-export default function Canvas({ cells, action }) {
-  // console.log(">> Refresh: Canvas");
-
-  const dispatch = useDispatch();
-  const canvasRef = useRef(null);
-  const [width, height] = useWindowSize();
-  const [cursor, setCursor] = useState(null);
-  const state = useSelector((store) => store.automata);
-  const showBackground =
-    Object.keys(cells).length <= 0 && state.running === false;
-
-  useEffect(() => {
-    ctx = canvasRef.current.getContext("2d");
-  }, []);
+export default function Canvas() {
+  const dispatch = useDispatch()
+  const canvasRef = useRef(null)
+  const drag = useRef({ startPoint: null, startCanvasOffset: null })
+  const size = useElementSize(canvasRef)
+  const [cursor, setCursor] = useState(null)
+  const cells = useSelector((store) => store.automata.cells)
+  const params = useSelector((store) => store.automata.params)
+  const running = useSelector((store) => store.automata.running)
+  const showBackground = Object.keys(cells).length <= 0 && !running
 
   useEffect(() => {
-    draw();
-  }, [state.params, cells, cursor, width, height]);
+    if (!size) return
+    const canvas = canvasRef.current
+    const [width, height] = size
+    if (canvas.width !== width) canvas.width = width
+    if (canvas.height !== height) canvas.height = height
+    const ctx = canvas.getContext('2d')
+    drawCells(ctx, canvasRef, cells, params)
+    drawFigure(ctx, canvasRef, cursor, params)
+  }, [size, cells, cursor, params])
 
-  const draw = () => {
-    drawCells(ctx, canvasRef, cells, state.params);
-    drawFigure(ctx, canvasRef, cursor, state.params);
-  };
-
-  // Canvas Actions
   function mouseDown(e) {
-    drag.startPoint = [e.clientX, e.clientY];
-    drag.startCanvasOffset = state.params.offset;
+    drag.current.startPoint = [e.clientX, e.clientY]
+    drag.current.startCanvasOffset = params.offset
   }
 
   function mouseMove(e) {
-    const previousPosition = cursor;
-    setCursor([e.clientX, e.clientY]);
+    const position = [e.clientX, e.clientY]
+    const previousPosition = cursor ?? position
+    setCursor(position)
 
-    if (drag.startPoint === null) return;
+    if (drag.current.startPoint === null) return
 
-    switch (state.params.tool) {
+    switch (params.tool) {
       case 1:
-        mouseDraw([e.clientX, e.clientY], previousPosition);
-        break;
+        mouseDraw(position, previousPosition)
+        break
       default: {
         const {
           startPoint: [xPoint, yPoint],
           startCanvasOffset: [xOffset, yOffset],
-        } = drag;
+        } = drag.current
         dispatch(
           updateParam({
-            param: "offset",
+            param: 'offset',
             value: [
-              xOffset + (e.clientX - xPoint) / state.params.zoom,
-              yOffset + (e.clientY - yPoint) / state.params.zoom,
+              xOffset + (e.clientX - xPoint) / params.zoom,
+              yOffset + (e.clientY - yPoint) / params.zoom,
             ],
-          })
-        );
-        break;
+          }),
+        )
+        break
       }
     }
   }
 
   function mouseUp(e) {
-    mouseClick([e.clientX, e.clientY]);
-    drag.startPoint = null;
-    drag.startCanvasOffset = null;
+    mouseClick([e.clientX, e.clientY])
+    drag.current.startPoint = null
+    drag.current.startCanvasOffset = null
   }
 
   function mouseLeave() {
-    setCursor(null);
-    drag.startPoint = null;
-    drag.startCanvasOffset = null;
+    setCursor(null)
+    drag.current.startPoint = null
+    drag.current.startCanvasOffset = null
   }
 
-  function mouseClick(cursor) {
-    if (isMouseDrag()) return;
+  function mouseClick(position) {
+    if (isMouseDrag()) return
 
-    const cell = mouseGridCell(canvasRef, cursor, state.params);
-    action(cell);
+    const cell = mouseGridCell(canvasRef, position, params)
+    dispatch(applyTool({ cell }))
   }
 
-  function mouseDraw(cursor, previousCursor) {
-    const cell = mouseGridCell(canvasRef, cursor, state.params);
-    const previousCell = mouseGridCell(canvasRef, previousCursor, state.params);
-    action(cell, previousCell);
+  function mouseDraw(position, previousPosition) {
+    const cell = mouseGridCell(canvasRef, position, params)
+    const previousCell = mouseGridCell(canvasRef, previousPosition, params)
+    dispatch(applyTool({ cell, previousCell }))
   }
 
   function isMouseDrag() {
-    if (!drag.startPoint) return true;
+    if (!drag.current.startPoint) return true
 
-    const [xDrag, yDrag] = drag.startCanvasOffset;
-    const [xOffset, yOffset] = state.params.offset;
-    return (
-      xDrag < xOffset - 3 ||
-      xDrag > xOffset + 3 ||
-      yDrag < yOffset - 3 ||
-      yDrag > yOffset + 3
-    );
+    const [xDrag, yDrag] = drag.current.startCanvasOffset
+    const [xOffset, yOffset] = params.offset
+    return xDrag < xOffset - 3 || xDrag > xOffset + 3 || yDrag < yOffset - 3 || yDrag > yOffset + 3
   }
 
   return (
@@ -112,27 +101,19 @@ export default function Canvas({ cells, action }) {
       {showBackground && (
         <img
           src={PointsBackground}
-          className="absolute left-0 h-full p-4 m-auto transform -translate-x-1/2 left-1/2"
-          alt="Canvas background"
+          className="absolute left-1/2 m-auto h-full -translate-x-1/2 p-4"
+          alt=""
         />
       )}
 
       <canvas
-        className="absolute top-0 left-0 w-full h-full"
+        className="absolute top-0 left-0 h-full w-full"
         ref={canvasRef}
-        width={canvasRef?.current?.clientWidth}
-        height={canvasRef?.current?.clientHeight}
         onMouseDown={mouseDown}
         onMouseMove={mouseMove}
         onMouseUp={mouseUp}
         onMouseLeave={mouseLeave}
       ></canvas>
     </>
-  );
+  )
 }
-
-Canvas.displayName = "Canvas";
-Canvas.propTypes = {
-  cells: PropTypes.object,
-  action: PropTypes.func,
-};

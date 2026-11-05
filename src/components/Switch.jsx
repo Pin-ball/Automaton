@@ -1,45 +1,41 @@
-import { clsx } from "clsx";
-import PropTypes from "prop-types";
+import { cn } from '@src/lib/utils.js'
+import PropTypes from 'prop-types'
+import { useId } from 'react'
 
 export default function Switch({ children, onClick, active, disabled }) {
-  function click() {
-    if (!disabled) onClick();
-  }
+  const labelId = useId()
 
   return (
     <div className="flex justify-between">
-      <label className={clsx({ "text-c-neutral-500": disabled })}>
+      <span id={labelId} className={cn({ 'text-input': disabled })}>
         {children}
-      </label>
+      </span>
 
-      <div
-        onClick={click}
-        className="inline-block p-1 border rounded-full border-c-neutral-600 bg-c-neutral-800 group"
+      <button
+        type="button"
+        role="switch"
+        aria-checked={active}
+        aria-labelledby={labelId}
+        disabled={disabled}
+        onClick={onClick}
+        className="bg-secondary group inline-block rounded-full border p-1"
       >
-        <div
-          className={clsx(
-            "rounded-full h-4 w-4 transition-all",
-            active ? "ml-5" : "mr-5",
-            active
-              ? {
-                  "bg-c-neutral-600": disabled,
-                  "bg-c-yellow-500": !disabled,
-                }
-              : {
-                  "bg-c-neutral-600": disabled,
-                  "bg-c-neutral-500 group-hover:bg-c-neutral-400": !disabled,
-                }
+        <span
+          className={cn(
+            'block size-4 rounded-full transition-all',
+            active ? 'ml-5' : 'mr-5',
+            disabled && 'bg-accent',
+            !disabled && (active ? 'bg-primary' : 'bg-input group-hover:bg-muted-foreground'),
           )}
-        ></div>
-      </div>
+        />
+      </button>
     </div>
-  );
+  )
 }
 
-Switch.displayName = "Switch";
 Switch.propTypes = {
   onClick: PropTypes.func,
   active: PropTypes.bool,
   disabled: PropTypes.bool,
   children: PropTypes.node,
-};
+}

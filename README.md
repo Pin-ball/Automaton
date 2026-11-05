@@ -6,6 +6,7 @@ You can already play with it [here](#).
 ### Run projet
 
 ```bash
+nvm use
 npm install
 npm run dev
 ```

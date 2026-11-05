@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@import "rsuite/dist/rsuite-no-reset.min.css" layer(components);
+
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/RobotoFlex-VariableFont.ttf");
+}
+
+:root {
+  color-scheme: dark;
+
+  --radius: 0.5rem;
+
+  --background: #0f0f0f;
+  --foreground: #fafafa;
+  --card: #1e1e1e;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+  --primary: #ffed35;
+  --primary-foreground: #0f0f0f;
+  --secondary: #171717;
+  --secondary-foreground: #fafafa;
+  --muted: #171717;
+  --muted-foreground: #909090;
+  --accent: #242424;
+  --accent-foreground: #fafafa;
+  --border: #242424;
+  --input: #3e3e3e;
+  --ring: #ffed35;
+}
+
+@theme inline {
+  --font-sans: Roboto, ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply fill-foreground stroke-foreground bg-background font-sans text-foreground;
+  }
+}
