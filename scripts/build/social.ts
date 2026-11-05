@@ -1,22 +1,24 @@
+import type { HtmlTagDescriptor, Plugin } from 'vite'
+
 const NAME = 'Cellular Automata'
 const DESCRIPTION =
   "A Conway's Game of Life simulator: draw, stamp patterns and watch cells evolve."
 
 const IMAGE = { path: '/assets/icon-512.png', type: 'image/png', width: 512, height: 512 }
 
-function siteUrl() {
+function siteUrl(): URL | null {
   const domain = process.env['VERCEL_PROJECT_PRODUCTION_URL']
   return domain ? new URL(`https://${domain}`) : null
 }
 
-function meta(key, value, content) {
+function meta(key: 'name' | 'property', value: string, content: string): HtmlTagDescriptor {
   return { tag: 'meta', attrs: { [key]: value, content }, injectTo: 'head' }
 }
 
-function socialTags() {
+function socialTags(): HtmlTagDescriptor[] {
   const site = siteUrl()
   const tags = [
-    { tag: 'title', children: NAME, injectTo: 'head' },
+    { tag: 'title', children: NAME, injectTo: 'head' } satisfies HtmlTagDescriptor,
     meta('name', 'description', DESCRIPTION),
     meta('property', 'og:type', 'website'),
     meta('property', 'og:site_name', NAME),
@@ -38,7 +40,7 @@ function socialTags() {
   ]
 }
 
-export function social() {
+export function social(): Plugin {
   return {
     name: 'automaton:social',
     transformIndexHtml: () => socialTags(),

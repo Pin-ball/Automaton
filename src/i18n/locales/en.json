@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Cellular Automata",
+    "status": "Redesign in progress"
+  },
+  "screenTooSmall": {
+    "title": "Screen too small",
+    "description": "Cellular Automata needs more room to grow. Open it on a larger screen or enlarge your window."
+  }
+}
