@@ -1,7 +1,7 @@
 import { kernelTaps } from '@src/engine/rules/kernel.ts'
 import { presets } from '@src/engine/rules/presets.ts'
 import type { Rule } from '@src/engine/rules/rule.ts'
-import { neighborCount, validateRule } from '@src/engine/rules/rule.ts'
+import { neighborCount, sameRule, validateRule } from '@src/engine/rules/rule.ts'
 import { countsTable } from '@src/engine/rules/table.ts'
 import { describe, expect, it } from 'vitest'
 
@@ -80,5 +80,12 @@ describe('validateRule', () => {
     ],
   ])('rejects %s', (_, rule) => {
     expect(() => validateRule(rule)).toThrow(RangeError)
+  })
+})
+
+describe('sameRule', () => {
+  it('compares rules by value, including infinite states', () => {
+    expect(sameRule(presets.lenia, structuredClone(presets.lenia))).toBe(true)
+    expect(sameRule(presets.conway, { ...presets.conway, edge: 'wall' })).toBe(false)
   })
 })

@@ -1,3 +1,4 @@
+import { EngineError } from '@src/engine/errors.ts'
 import { sampling } from '@src/engine/gl/textures.ts'
 import { createFramebufferInfo } from 'twgl.js'
 
@@ -23,20 +24,33 @@ function createTarget(gl: WebGL2RenderingContext, width: number, height: number)
 
   const [state, layers] = info.attachments
   if (!(state instanceof WebGLTexture) || !(layers instanceof WebGLTexture)) {
-    throw new Error('Unexpected framebuffer attachments')
+    throw new EngineError(gl.isContextLost() ? 'contextLost' : 'unsupported', 'render targets')
   }
   return { framebuffer: info.framebuffer, state, layers }
+}
+
+function disposeTargets(gl: WebGL2RenderingContext, targets: readonly Target[]) {
+  for (const target of targets) {
+    gl.deleteFramebuffer(target.framebuffer)
+    gl.deleteTexture(target.state)
+    gl.deleteTexture(target.layers)
+  }
 }
 
 export class TargetRing {
   private slots: [Target, Target, Target]
 
   constructor(gl: WebGL2RenderingContext, width: number, height: number) {
-    this.slots = [
-      createTarget(gl, width, height),
-      createTarget(gl, width, height),
-      createTarget(gl, width, height),
-    ]
+    const built: Target[] = []
+    try {
+      for (let i = 0; i < 3; i++) built.push(createTarget(gl, width, height))
+    } catch (error) {
+      disposeTargets(gl, built)
+      throw error
+    }
+    const [previous, current, work] = built
+    if (!previous || !current || !work) throw new EngineError('unsupported', 'render targets')
+    this.slots = [previous, current, work]
   }
 
   get previous(): Target {
@@ -56,15 +70,16 @@ export class TargetRing {
     this.slots = [current, work, previous]
   }
 
+  swap() {
+    const [previous, current, work] = this.slots
+    this.slots = [previous, work, current]
+  }
+
   all(): readonly Target[] {
     return this.slots
   }
 
   dispose(gl: WebGL2RenderingContext) {
-    for (const target of this.slots) {
-      gl.deleteFramebuffer(target.framebuffer)
-      gl.deleteTexture(target.state)
-      gl.deleteTexture(target.layers)
-    }
+    disposeTargets(gl, this.slots)
   }
 }

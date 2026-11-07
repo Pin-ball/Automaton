@@ -25,3 +25,7 @@ export function bindProgram(
   gl.useProgram(program.program)
   setUniforms(program, uniforms)
 }
+
+export function deleteProgram(gl: WebGL2RenderingContext, program: Program) {
+  gl.deleteProgram(program.program)
+}

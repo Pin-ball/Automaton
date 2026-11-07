@@ -1,33 +1,35 @@
 import type { EngineContext } from '@src/engine/engineContext.ts'
 import { EngineError } from '@src/engine/errors.ts'
+import type { Program } from '@src/engine/gl/program.ts'
 import { bindProgram } from '@src/engine/gl/program.ts'
 import { readAttachmentsAsync } from '@src/engine/gl/readback.ts'
 import { TargetRing } from '@src/engine/gl/targets.ts'
 import type { Rule } from '@src/engine/rules/rule.ts'
 import { validateRule } from '@src/engine/rules/rule.ts'
-import type { Cells, Rect, Region, TrailFade, WorldOptions } from '@src/engine/types.ts'
+import { cellsSchema, stepCountSchema, worldOptionsSchema } from '@src/engine/schemas.ts'
+import { EDGE } from '@src/engine/shaders/defines.ts'
+import type {
+  Cells,
+  PaintOp,
+  Rect,
+  Region,
+  TrailFade,
+  WorldOptions,
+  ZoneOptions,
+} from '@src/engine/types.ts'
+import { parseInput } from '@src/engine/validation.ts'
+import { adaptationPasses } from '@src/engine/world/adaptation.ts'
+import { paintBatches } from '@src/engine/world/paint.ts'
+import { randomSequence } from '@src/engine/world/random.ts'
+import type { Point } from '@src/engine/world/rect.ts'
+import { checkRect } from '@src/engine/world/rect.ts'
 import { RuleResources } from '@src/engine/world/ruleResources.ts'
-
-const DEFAULT_TRAIL_FADE: TrailFade = { first: 0.62, decay: 0.8 }
-
-function checkRect(rect: Rect, width: number, height: number) {
-  const { x, y, width: w, height: h } = rect
-  const integers = [x, y, w, h].every(Number.isInteger)
-  if (!integers || w < 1 || h < 1 || x < 0 || y < 0 || x + w > width || y + h > height) {
-    throw new RangeError(`Rect ${x},${y} ${w}×${h} is outside the ${width}×${height} world`)
-  }
-}
+import { ZoneSet } from '@src/engine/world/zones.ts'
 
 function redChannel(pixels: Float32Array, count: number): Float32Array {
   const out = new Float32Array(count)
   for (let i = 0; i < count; i++) out[i] = pixels[i * 4] ?? 0
   return out
-}
-
-function checkTrailFade(fade: TrailFade): TrailFade {
-  const valid = [fade.first, fade.decay].every((value) => value >= 0 && value <= 1)
-  if (!valid) throw new RangeError('Trail fade values must be within [0, 1]')
-  return Object.freeze({ ...fade })
 }
 
 export class World {
@@ -38,21 +40,28 @@ export class World {
   private currentRule: Rule
   private ring: TargetRing
   private resources: RuleResources
+  private zones: ZoneSet
+  private nextRandom: () => number
   private generationCount = 0
   private disposed = false
 
   constructor(ctx: EngineContext, options: WorldOptions) {
     ctx.assertUsable()
-    const { width, height } = options
+    const { width, height, rule, trailFade, seed } = parseInput(
+      worldOptionsSchema,
+      options,
+      'world options',
+    )
     const limit: number = ctx.gl.getParameter(ctx.gl.MAX_TEXTURE_SIZE)
-    if (![width, height].every((side) => Number.isInteger(side) && side >= 1 && side <= limit)) {
-      throw new RangeError(`World width and height must be integers within 1..${limit}`)
+    if (width > limit || height > limit) {
+      throw new RangeError(`World width and height must not exceed ${limit}`)
     }
     this.ctx = ctx
     this.width = width
     this.height = height
-    this.currentRule = validateRule(options.rule)
-    this.trailFade = checkTrailFade(options.trailFade ?? DEFAULT_TRAIL_FADE)
+    this.currentRule = rule
+    this.trailFade = Object.freeze(trailFade)
+    this.nextRandom = randomSequence(seed)
     this.ring = new TargetRing(ctx.gl, width, height)
     try {
       this.resources = new RuleResources(ctx.gl, this.currentRule)
@@ -60,6 +69,13 @@ export class World {
       this.ring.dispose(ctx.gl)
       throw error
     }
+    this.zones = new ZoneSet({
+      width,
+      height,
+      createWorld: (zoneOptions) => new World(ctx, { ...zoneOptions, trailFade: this.trailFade }),
+      copyIn: (source, origin, to, alsoPrevious) => this.copyIn(source, origin, to, alsoPrevious),
+      sink: (world, band) => world.clearBorder(band),
+    })
     ctx.register(this)
   }
 
@@ -79,18 +95,48 @@ export class World {
     this.assertUsable()
     this.currentRule = validateRule(rule)
     this.resources.update(this.currentRule)
+    this.zones.sync(this.currentRule)
   }
 
   step(count = 1) {
     this.assertUsable()
-    if (!Number.isInteger(count) || count < 0)
-      throw new RangeError('Step count must be a non-negative integer')
-    for (let i = 0; i < count; i++) this.stepOnce()
+    const steps = parseInput(stepCountSchema, count, 'step count')
+    for (let i = 0; i < steps; i++) {
+      this.stepOnce()
+      this.zones.afterStep()
+    }
   }
 
-  upload(rect: Rect, cells: Cells) {
+  paint(ops: readonly PaintOp[]) {
+    this.assertUsable()
+    for (const batch of paintBatches(ops)) {
+      this.transform(this.ctx.programs.paint, { ...batch, uSeed: this.nextRandom() })
+    }
+  }
+
+  adapt(rule: Rule) {
+    this.assertUsable()
+    const before = this.currentRule
+    this.setRule(rule)
+    for (const pass of adaptationPasses(before, this.currentRule)) {
+      this.transform(this.ctx.programs.adapt, { ...pass, uSeed: this.nextRandom() })
+    }
+  }
+
+  protect(options: ZoneOptions): number {
+    this.assertUsable()
+    return this.zones.add(options, this.currentRule)
+  }
+
+  unprotect(id: number) {
+    this.assertUsable()
+    this.zones.remove(id)
+  }
+
+  upload(rect: Rect, input: Cells) {
     this.assertUsable()
     checkRect(rect, this.width, this.height)
+    const cells = parseInput(cellsSchema, input, 'cells')
     const size = rect.width * rect.height
     const trail = cells.trail ?? cells.state
     if (cells.state.length !== size || trail.length !== size) {
@@ -131,7 +177,7 @@ export class World {
     }
   }
 
-  clear() {
+  clear(start?: Cells) {
     this.assertUsable()
     const { gl } = this.ctx
     for (const target of this.ring.all()) {
@@ -141,12 +187,15 @@ export class World {
     }
     this.ctx.endPass()
     this.generationCount = 0
+    if (start) this.upload(this.bounds, start)
+    this.zones.restartActive()
   }
 
   dispose() {
     if (this.disposed) return
     this.disposed = true
     this.ctx.unregister(this)
+    this.zones.dispose()
     if (this.ctx.lost) return
     this.ring.dispose(this.ctx.gl)
     this.resources.dispose()
@@ -192,5 +241,57 @@ export class World {
     this.ctx.endPass()
     this.ring.advance()
     this.generationCount++
+  }
+
+  private transform(program: Program, uniforms: Record<string, unknown>) {
+    const { current, work } = this.ring
+    this.ctx.beginPass(work.framebuffer, this.width, this.height)
+    bindProgram(this.ctx.gl, program, {
+      uState: current.state,
+      uLayers: current.layers,
+      uEdge: EDGE[this.currentRule.edge],
+      ...this.zones.lockedBoxes(),
+      ...uniforms,
+    })
+    this.ctx.drawFullscreen()
+    this.ctx.endPass()
+    this.ring.swap()
+  }
+
+  private copyIn(source: World, origin: Point, to: Rect, alsoPrevious: boolean) {
+    const targets = alsoPrevious ? [this.ring.current, this.ring.previous] : [this.ring.current]
+    const { gl } = this.ctx
+    for (const target of targets) {
+      this.ctx.beginPass(target.framebuffer, this.width, this.height)
+      gl.enable(gl.SCISSOR_TEST)
+      gl.scissor(to.x, to.y, to.width, to.height)
+      bindProgram(gl, this.ctx.programs.copy, {
+        uState: source.ring.current.state,
+        uLayers: source.ring.current.layers,
+        uOffset: [origin.x, origin.y],
+      })
+      this.ctx.drawFullscreen()
+      gl.disable(gl.SCISSOR_TEST)
+    }
+    this.ctx.endPass()
+  }
+
+  private clearBorder(band: number) {
+    const { gl } = this.ctx
+    const { width, height } = this
+    this.ctx.beginPass(this.ring.current.framebuffer, width, height)
+    gl.enable(gl.SCISSOR_TEST)
+    for (const [x, y, w, h] of [
+      [0, 0, width, band],
+      [0, height - band, width, band],
+      [0, 0, band, height],
+      [width - band, 0, band, height],
+    ] as const) {
+      gl.scissor(x, y, w, h)
+      gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0])
+      gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0])
+    }
+    gl.disable(gl.SCISSOR_TEST)
+    this.ctx.endPass()
   }
 }

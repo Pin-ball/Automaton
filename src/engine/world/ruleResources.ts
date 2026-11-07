@@ -28,18 +28,25 @@ export class RuleResources {
     this.gl = gl
     this.rule = rule
     this.taps = this.createTaps(rule)
-    this.table = this.createTable(rule)
+    try {
+      this.table = this.createTable(rule)
+    } catch (error) {
+      gl.deleteTexture(this.taps.texture)
+      throw error
+    }
   }
 
   update(rule: Rule) {
     this.rule = rule
     if (this.taps.key !== tapsKey(rule)) {
+      const taps = this.createTaps(rule)
       this.gl.deleteTexture(this.taps.texture)
-      this.taps = this.createTaps(rule)
+      this.taps = taps
     }
     if (this.table.key !== tableKey(rule)) {
+      const table = this.createTable(rule)
       this.gl.deleteTexture(this.table.texture)
-      this.table = this.createTable(rule)
+      this.table = table
     }
   }
 

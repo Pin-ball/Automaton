@@ -6,13 +6,15 @@
     "bosco",
     "conway",
     "dbaeumer",
+    "dequal",
     "esbenp",
     "glsl",
+    "Gosper",
     "highp",
     "ivec",
     "languagedetector",
-    "lenia",
     "Lenia",
+    "lenia",
     "Lngs",
     "mkcert",
     "nvmrc",
@@ -21,7 +23,9 @@
     "swiftshader",
     "texel",
     "twgl",
+    "uvec",
     "veth",
     "webglcontextlost"
-  ]
+  ],
+  "ignoreRegExpList": ["/^\\s*[0-9bo$!]+\\s*$/gm"]
 }

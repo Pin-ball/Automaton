@@ -1,19 +1,14 @@
 import type { EngineErrorCode, World } from '@src/engine/index.ts'
 import { isEngineError } from '@src/engine/index.ts'
 import { ALIVE_THRESHOLD } from '@src/engine/shaders/defines.ts'
+import { randomSequence } from '@src/engine/world/random.ts'
+
+export function unitRandom(seed: number): () => number {
+  const next = randomSequence(seed)
+  return () => next() / 2 ** 32
+}
 
 type ScatterOptions = { size: number; density: number; seed: number; binary?: boolean }
-
-function seededRandom(seed: number): () => number {
-  let value = seed >>> 0
-  return () => {
-    value = (value + 0x6d2b79f5) >>> 0
-    let t = value
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 export function place(world: World, x: number, y: number, rows: readonly string[]) {
   const width = Math.max(...rows.map((row) => row.length))
@@ -30,7 +25,7 @@ export function fill(world: World) {
 }
 
 export function scatter(world: World, { size, density, seed, binary = false }: ScatterOptions) {
-  const next = seededRandom(seed)
+  const next = unitRandom(seed)
   const state = new Float32Array(size * size).map(() => {
     if (next() >= density) return 0
     return binary ? 1 : next()

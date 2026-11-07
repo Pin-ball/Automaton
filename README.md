@@ -34,6 +34,8 @@ Node 24, Vite, React 19 (React Compiler), TypeScript 7, Tailwind CSS 4, WebGL 2 
 | Folder          | Content                                                                 |
 | --------------- | ----------------------------------------------------------------------- |
 | `src/engine/`   | GPU simulation, independent from React ([README](src/engine/README.md)) |
+| `src/rules/`    | The site's rules: pace, brush and starting seed for each                |
+| `src/patterns/` | Bestiary: known shapes per rule, written in RLE                         |
 | `src/features/` | Pages                                                                   |
 | `src/layout/`   | Shell, 404, error and notice screens                                    |
 | `src/app/`      | Router and paths                                                        |

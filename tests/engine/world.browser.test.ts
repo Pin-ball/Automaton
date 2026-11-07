@@ -249,6 +249,12 @@ describe('World', () => {
     expect(() => world.upload({ x: 7, y: 7, width: 2, height: 2 }, { state })).toThrow(RangeError)
     expect(() => world.upload({ x: 0, y: 0, width: 3, height: 3 }, { state })).toThrow(RangeError)
     expect(() => world.setRule({ ...presets.lenia, dt: 2 })).toThrow(RangeError)
+    expect(() => world.step(1.5)).toThrow(RangeError)
+    const numbers = JSON.parse('{"state": [1, 0, 0, 1]}')
+    const square = { x: 0, y: 0, width: 2, height: 2 }
+    expect(() => world.upload(square, numbers)).toThrow(RangeError)
+    const invalid = new Float32Array([1, Number.NaN, 2, 0])
+    expect(() => world.upload(square, { state: invalid })).toThrow(RangeError)
   })
 })
 

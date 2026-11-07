@@ -1,10 +1,8 @@
-import type { PresetName } from '@src/dev/preview.ts'
 import { HEIGHT, Preview, WIDTH } from '@src/dev/preview.ts'
 import { cn } from '@src/lib/utils.ts'
+import { ruleNames } from '@src/rules/catalog.ts'
 import type { PointerEvent, ReactNode } from 'react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-
-const PRESETS: PresetName[] = ['conway', 'bosco', 'lenia']
 
 function Control({
   active = false,
@@ -82,13 +80,13 @@ export function DevPreview() {
       )}
 
       <footer className="flex w-full max-w-5xl flex-wrap items-center gap-2">
-        {PRESETS.map((preset) => (
+        {ruleNames.map((name) => (
           <Control
-            key={preset}
-            active={snapshot.preset === preset}
-            onClick={() => preview.setPreset(preset)}
+            key={name}
+            active={snapshot.ruleName === name}
+            onClick={() => preview.selectRule(name)}
           >
-            {preset}
+            {name}
           </Control>
         ))}
         <span className="bg-border mx-2 h-6 w-px" />
@@ -96,7 +94,7 @@ export function DevPreview() {
           {snapshot.playing ? 'Pause' : 'Play'}
         </Control>
         <Control onClick={() => preview.stepOnce()}>Step</Control>
-        <Control onClick={() => preview.randomize()}>Randomize</Control>
+        <Control onClick={() => preview.reseed()}>Reseed</Control>
         <Control onClick={() => preview.clear()}>Clear</Control>
         <label className="text-muted-foreground ml-auto flex items-center gap-2 font-mono text-sm">
           {snapshot.speed} steps/s

@@ -1,10 +1,12 @@
 import type { Engine, World } from '@src/engine/index.ts'
-import { createEngine, isEngineError, presets } from '@src/engine/index.ts'
-
-export type PresetName = keyof typeof presets
+import { createEngine, isEngineError } from '@src/engine/index.ts'
+import { gosperGun } from '@src/patterns/conway.ts'
+import type { RuleName } from '@src/rules/catalog.ts'
+import { rules } from '@src/rules/catalog.ts'
+import { reseed as reseedWorld } from '@src/rules/seeds.ts'
 
 export type Snapshot = {
-  preset: PresetName
+  ruleName: RuleName
   playing: boolean
   speed: number
   generation: number
@@ -14,13 +16,11 @@ export type Snapshot = {
 export const WIDTH = 256
 export const HEIGHT = 160
 
-const SPEED: Record<PresetName, number> = { conway: 12, bosco: 10, lenia: 30 }
-const BRUSH: Record<PresetName, number> = { conway: 0, bosco: 2, lenia: 3 }
 const MAX_STEPS_PER_FRAME = 4
 const SNAPSHOT_INTERVAL_MS = 100
-const BACKGROUND = [6, 8, 12]
-const ALIVE = [255, 196, 107]
-const TRAIL = [224, 120, 46]
+const BACKGROUND_COLOR = [6, 8, 12]
+const ALIVE_COLOR = [255, 196, 107]
+const TRAIL_COLOR = [224, 120, 46]
 
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -36,9 +36,9 @@ export class Preview {
   private display: CanvasRenderingContext2D | null = null
   private image = new ImageData(WIDTH, HEIGHT)
   private snapshot: Snapshot = {
-    preset: 'conway',
+    ruleName: 'conway',
     playing: true,
-    speed: SPEED.conway,
+    speed: rules.conway.pace,
     generation: 0,
     error: null,
   }
@@ -63,9 +63,19 @@ export class Preview {
       this.world = this.engine.createWorld({
         width: WIDTH,
         height: HEIGHT,
-        rule: presets[this.snapshot.preset],
+        rule: rules[this.snapshot.ruleName].rule,
       })
-      this.randomize()
+      this.world.protect({
+        rect: {
+          x: Math.floor((WIDTH - gosperGun.width) / 2),
+          y: Math.floor((HEIGHT - gosperGun.height) / 2),
+          width: gosperGun.width,
+          height: gosperGun.height,
+        },
+        state: gosperGun.state,
+        rule: gosperGun.rule,
+      })
+      this.reseed()
       this.frame = requestAnimationFrame(this.tick)
     } catch (error) {
       this.update({ error: describe(error) })
@@ -83,9 +93,9 @@ export class Preview {
     this.budget = 0
   }
 
-  setPreset(preset: PresetName) {
-    this.world?.setRule(presets[preset])
-    this.update({ preset, speed: SPEED[preset] })
+  selectRule(ruleName: RuleName) {
+    this.withWorld((world) => world.adapt(rules[ruleName].rule))
+    this.update({ ruleName, speed: rules[ruleName].pace })
   }
 
   setSpeed(speed: number) {
@@ -97,49 +107,23 @@ export class Preview {
   }
 
   stepOnce() {
-    this.world?.step()
+    this.withWorld((world) => world.step())
     this.update({ playing: false })
   }
 
   clear() {
-    this.world?.clear()
+    this.withWorld((world) => world.clear())
     this.emit()
   }
 
-  randomize() {
-    const world = this.world
-    if (!world) return
-    world.clear()
-    const state = new Float32Array(WIDTH * HEIGHT)
-    if (this.snapshot.preset === 'lenia') {
-      for (let patch = 0; patch < 12; patch++) {
-        const x0 = Math.floor(Math.random() * (WIDTH - 24))
-        const y0 = Math.floor(Math.random() * (HEIGHT - 24))
-        for (let y = 0; y < 24; y++) {
-          for (let x = 0; x < 24; x++) state[(y0 + y) * WIDTH + x0 + x] = Math.random()
-        }
-      }
-    } else {
-      const density = this.snapshot.preset === 'bosco' ? 0.5 : 0.3
-      for (let i = 0; i < state.length; i++) state[i] = Math.random() < density ? 1 : 0
-    }
-    world.upload(world.bounds, { state })
+  reseed() {
+    this.withWorld((world) => reseedWorld(world, this.snapshot.ruleName))
     this.emit()
   }
 
   paint(x: number, y: number) {
-    const world = this.world
-    if (!world) return
-    const radius = BRUSH[this.snapshot.preset]
-    const left = Math.max(0, x - radius)
-    const top = Math.max(0, y - radius)
-    const width = Math.min(WIDTH, x + radius + 1) - left
-    const height = Math.min(HEIGHT, y + radius + 1) - top
-    if (width < 1 || height < 1) return
-    world.upload(
-      { x: left, y: top, width, height },
-      { state: new Float32Array(width * height).fill(1) },
-    )
+    const { brush } = rules[this.snapshot.ruleName]
+    this.withWorld((world) => world.paint([{ x: x + 0.5, y: y + 0.5, ...brush }]))
   }
 
   private tick = (time: number) => {
@@ -178,7 +162,10 @@ export class Preview {
       for (let i = 0; i < state.length; i++) {
         const value = state[i] ?? 0
         const glow = (trail[i] ?? 0) * 0.35
-        const color = value >= glow ? mix(BACKGROUND, ALIVE, value) : mix(BACKGROUND, TRAIL, glow)
+        const color =
+          value >= glow
+            ? mix(BACKGROUND_COLOR, ALIVE_COLOR, value)
+            : mix(BACKGROUND_COLOR, TRAIL_COLOR, glow)
         pixels.set([color[0] ?? 0, color[1] ?? 0, color[2] ?? 0, 255], i * 4)
       }
       this.display?.putImageData(this.image, 0, 0)
@@ -188,6 +175,15 @@ export class Preview {
       }
     } finally {
       this.reading = false
+    }
+  }
+
+  private withWorld(action: (world: World) => void) {
+    if (!this.world) return
+    try {
+      action(this.world)
+    } catch (error) {
+      this.update({ error: describe(error) })
     }
   }
 

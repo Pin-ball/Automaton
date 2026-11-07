@@ -1,18 +1,36 @@
 import { EngineError } from '@src/engine/errors.ts'
 import { createContext } from '@src/engine/gl/context.ts'
 import type { Program } from '@src/engine/gl/program.ts'
-import { compileProgram } from '@src/engine/gl/program.ts'
+import { compileProgram, deleteProgram } from '@src/engine/gl/program.ts'
+import adapt from '@src/engine/shaders/adapt.frag?raw'
+import cells from '@src/engine/shaders/cells.glsl?raw'
+import copy from '@src/engine/shaders/copy.frag?raw'
 import { DEFINES } from '@src/engine/shaders/defines.ts'
 import fragment from '@src/engine/shaders/fragment.glsl?raw'
 import fullscreen from '@src/engine/shaders/fullscreen.vert?raw'
+import locked from '@src/engine/shaders/locked.glsl?raw'
+import paint from '@src/engine/shaders/paint.frag?raw'
 import step from '@src/engine/shaders/step.frag?raw'
 import type { Surface } from '@src/engine/types.ts'
 
 type Disposable = { dispose(): void }
 
+type Programs = { step: Program; paint: Program; adapt: Program; copy: Program }
+
+function compileAll(gl: WebGL2RenderingContext): Programs {
+  const build = (...parts: string[]) =>
+    compileProgram(gl, fullscreen, [fragment, DEFINES, cells, ...parts].join('\n'))
+  return {
+    step: build(step),
+    paint: build(locked, paint),
+    adapt: build(locked, adapt),
+    copy: build(copy),
+  }
+}
+
 export class EngineContext {
   readonly gl: WebGL2RenderingContext
-  readonly programs: { step: Program }
+  readonly programs: Programs
   private surface: Surface
   private vertexArray: WebGLVertexArrayObject
   private worlds = new Set<Disposable>()
@@ -22,9 +40,7 @@ export class EngineContext {
   constructor(surface: Surface) {
     const gl = createContext(surface)
     try {
-      this.programs = {
-        step: compileProgram(gl, fullscreen, [fragment, DEFINES, step].join('\n')),
-      }
+      this.programs = compileAll(gl)
     } catch (error) {
       gl.getExtension('WEBGL_lose_context')?.loseContext()
       throw error
@@ -83,7 +99,7 @@ export class EngineContext {
     this.surface.removeEventListener('webglcontextlost', this.onLost)
     if (!this.lost) {
       const { gl } = this
-      gl.deleteProgram(this.programs.step.program)
+      for (const program of Object.values(this.programs)) deleteProgram(gl, program)
       gl.deleteVertexArray(this.vertexArray)
       gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
