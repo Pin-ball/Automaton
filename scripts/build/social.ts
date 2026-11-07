@@ -1,10 +1,14 @@
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { HtmlTagDescriptor, Plugin } from 'vite'
 
-const NAME = 'Cellular Automata'
+const NAME = 'Automaton'
 const DESCRIPTION =
-  "A Conway's Game of Life simulator: draw, stamp patterns and watch cells evolve."
+  "A few simple rules, and something that looks alive. From Conway's Game of Life to Lenia."
 
-const IMAGE = { path: '/assets/icon-512.png', type: 'image/png', width: 512, height: 512 }
+const IMAGE = { path: '/assets/social.png', type: 'image/png', width: 1200, height: 630 }
+
+const PUBLIC = resolve(import.meta.dirname, '../../public')
 
 function siteUrl(): URL | null {
   const domain = process.env['VERCEL_PROJECT_PRODUCTION_URL']
@@ -25,13 +29,15 @@ function socialTags(): HtmlTagDescriptor[] {
     meta('property', 'og:title', NAME),
     meta('property', 'og:description', DESCRIPTION),
     meta('property', 'og:locale', 'en_US'),
-    meta('name', 'twitter:card', 'summary'),
   ]
+  const image = existsSync(resolve(PUBLIC, `.${IMAGE.path}`))
+  tags.push(meta('name', 'twitter:card', site && image ? 'summary_large_image' : 'summary'))
   if (!site) return tags
+  tags.push(meta('property', 'og:url', site.href))
+  if (!image) return tags
 
   return [
     ...tags,
-    meta('property', 'og:url', site.href),
     meta('property', 'og:image', new URL(IMAGE.path, site).href),
     meta('property', 'og:image:type', IMAGE.type),
     meta('property', 'og:image:width', String(IMAGE.width)),

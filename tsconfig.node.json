@@ -20,5 +20,5 @@
     "noImplicitReturns": true,
     "paths": { "@src/*": ["./src/*"] }
   },
-  "include": ["vite.config.ts", "scripts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "scripts"]
 }

@@ -1,10 +1,20 @@
 {
   "app": {
-    "title": "Cellular Automata",
+    "title": "Automaton",
     "status": "Redesign in progress"
   },
   "screenTooSmall": {
     "title": "Screen too small",
-    "description": "Cellular Automata needs more room to grow. Open it on a larger screen or enlarge your window."
+    "description": "Automaton needs more room to grow. Open it on a larger screen or enlarge your window."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist, or no longer does.",
+    "home": "Back to the start"
+  },
+  "routeError": {
+    "title": "Something stopped",
+    "description": "Reloading almost always fixes it. If this screen comes back, the problem is in the app.",
+    "reload": "Reload"
   }
 }

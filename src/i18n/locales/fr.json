@@ -1,10 +1,20 @@
 {
   "app": {
-    "title": "Cellular Automata",
+    "title": "Automaton",
     "status": "Refonte en cours"
   },
   "screenTooSmall": {
     "title": "Écran trop petit",
-    "description": "Cellular Automata a besoin de plus de place pour grandir. Ouvrez-le sur un écran plus grand ou agrandissez votre fenêtre."
+    "description": "Automaton a besoin de plus de place pour grandir. Ouvrez-le sur un écran plus grand ou agrandissez votre fenêtre."
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Cette page n'existe pas, ou plus.",
+    "home": "Revenir au début"
+  },
+  "routeError": {
+    "title": "Quelque chose s'est arrêté",
+    "description": "Recharger règle presque toujours le problème. Si cet écran revient, le problème vient de l'application.",
+    "reload": "Recharger"
   }
 }

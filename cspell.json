@@ -2,5 +2,26 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en,fr",
-  "words": ["dbaeumer", "esbenp", "languagedetector", "Lngs", "mkcert", "nvmrc", "veth"]
+  "words": [
+    "bosco",
+    "conway",
+    "dbaeumer",
+    "esbenp",
+    "glsl",
+    "highp",
+    "ivec",
+    "languagedetector",
+    "lenia",
+    "Lenia",
+    "Lngs",
+    "mkcert",
+    "nvmrc",
+    "readback",
+    "RGBA",
+    "swiftshader",
+    "texel",
+    "twgl",
+    "veth",
+    "webglcontextlost"
+  ]
 }

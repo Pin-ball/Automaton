@@ -1,0 +1,8 @@
+export type { Engine } from '@src/engine/engine.ts'
+export { createEngine } from '@src/engine/engine.ts'
+export type { EngineErrorCode } from '@src/engine/errors.ts'
+export { EngineError, isEngineError } from '@src/engine/errors.ts'
+export { presets } from '@src/engine/rules/presets.ts'
+export { validateRule } from '@src/engine/rules/rule.ts'
+export type * from '@src/engine/types.ts'
+export type { World } from '@src/engine/world/world.ts'

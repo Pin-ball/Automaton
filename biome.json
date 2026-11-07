@@ -41,7 +41,9 @@
       "style": {
         "useImportType": {
           "level": "error",
-          "options": { "style": "separatedType" }
+          "options": {
+            "style": "separatedType"
+          }
         }
       },
       "nursery": {
@@ -56,5 +58,94 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/engine/gl/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "react",
+                      "react-*",
+                      "react/**",
+                      "zustand",
+                      "zustand/**",
+                      "i18next",
+                      "i18next-*",
+                      "@src/**",
+                      "!@src/engine/**"
+                    ],
+                    "message": "The engine stays independent from React, stores and the app: import only from src/engine or GPU libraries."
+                  }
+                ]
+              }
+            }
+          },
+          "correctness": {
+            "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/engine/**", "!src/engine/gl/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "react",
+                      "react-*",
+                      "react/**",
+                      "zustand",
+                      "zustand/**",
+                      "i18next",
+                      "i18next-*",
+                      "@src/**",
+                      "!@src/engine/**"
+                    ],
+                    "message": "The engine stays independent from React, stores and the app: import only from src/engine or GPU libraries."
+                  },
+                  {
+                    "group": ["twgl.js"],
+                    "message": "twgl.js stays behind src/engine/gl: use or extend the helpers there."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**", "!src/engine/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@src/engine/**", "!@src/engine/index.ts"],
+                    "message": "Use the engine through its public entry point, @src/engine/index.ts."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
