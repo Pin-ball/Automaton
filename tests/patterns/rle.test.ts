@@ -1,4 +1,4 @@
-import { gosperGun } from '@src/patterns/conway.ts'
+import { blinker, block, glider, gosperGun } from '@src/patterns/conway.ts'
 import { parseRle } from '@src/patterns/rle.ts'
 import { describe, expect, it } from 'vitest'
 
@@ -31,6 +31,12 @@ describe('parseRle', () => {
 })
 
 describe('Conway bestiary', () => {
+  it('draws the small classics', () => {
+    expect(rows(glider)).toEqual(['.O.', '..O', 'OOO'])
+    expect(rows(blinker)).toEqual(['OOO'])
+    expect(rows(block)).toEqual(['OO', 'OO'])
+  })
+
   it('draws the Gosper glider gun', () => {
     expect(rows(gosperGun)).toEqual([
       '........................O...........',

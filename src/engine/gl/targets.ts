@@ -83,3 +83,34 @@ export class TargetRing {
     disposeTargets(gl, this.slots)
   }
 }
+
+export type SumTarget = {
+  framebuffer: WebGLFramebuffer
+  texture: WebGLTexture
+  width: number
+  height: number
+}
+
+export function createSumTarget(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number,
+): SumTarget {
+  const info = createFramebufferInfo(
+    gl,
+    [{ internalFormat: gl.RG32F, ...sampling(gl) }],
+    width,
+    height,
+  )
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  const [texture] = info.attachments
+  if (!(texture instanceof WebGLTexture)) {
+    throw new EngineError(gl.isContextLost() ? 'contextLost' : 'unsupported', 'sum target')
+  }
+  return { framebuffer: info.framebuffer, texture, width, height }
+}
+
+export function disposeSumTarget(gl: WebGL2RenderingContext, target: SumTarget) {
+  gl.deleteFramebuffer(target.framebuffer)
+  gl.deleteTexture(target.texture)
+}

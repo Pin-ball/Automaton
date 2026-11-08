@@ -1,3 +1,5 @@
+import type { BenchResult } from '@src/dev/bench.ts'
+import { runBench as runBenchScenarios } from '@src/dev/bench.ts'
 import type { Engine, World } from '@src/engine/index.ts'
 import { createEngine, isEngineError } from '@src/engine/index.ts'
 import { gosperGun } from '@src/patterns/conway.ts'
@@ -10,6 +12,11 @@ export type Snapshot = {
   playing: boolean
   speed: number
   generation: number
+  population: number | null
+  mass: number | null
+  stepTime: number | null
+  bench: BenchResult[]
+  benching: boolean
   error: string | null
 }
 
@@ -40,6 +47,11 @@ export class Preview {
     playing: true,
     speed: rules.conway.pace,
     generation: 0,
+    population: null,
+    mass: null,
+    stepTime: null,
+    bench: [],
+    benching: false,
     error: null,
   }
   private listeners = new Set<() => void>()
@@ -126,10 +138,21 @@ export class Preview {
     this.withWorld((world) => world.paint([{ x: x + 0.5, y: y + 0.5, ...brush }]))
   }
 
+  runBench() {
+    if (this.snapshot.benching) return
+    this.update({ benching: true, bench: [] })
+    runBenchScenarios((result) => this.update({ bench: [...this.snapshot.bench, result] }))
+      .catch((error: unknown) => this.update({ error: describe(error) }))
+      .finally(() => {
+        this.lastTime = 0
+        this.update({ benching: false })
+      })
+  }
+
   private tick = (time: number) => {
     this.frame = requestAnimationFrame(this.tick)
     const world = this.world
-    if (!world) return
+    if (!world || this.snapshot.benching) return
 
     const elapsed = this.lastTime ? (time - this.lastTime) / 1000 : 0
     this.lastTime = time
@@ -149,6 +172,7 @@ export class Preview {
     if (time - this.lastEmit > SNAPSHOT_INTERVAL_MS) {
       this.lastEmit = time
       this.emit()
+      this.refreshStats(world)
     }
     if (!this.reading) void this.draw(world)
   }
@@ -170,12 +194,24 @@ export class Preview {
       }
       this.display?.putImageData(this.image, 0, 0)
     } catch (error) {
-      if (!isEngineError(error, 'disposed') && !isEngineError(error, 'contextLost')) {
-        this.update({ error: describe(error) })
-      }
+      this.report(error)
     } finally {
       this.reading = false
     }
+  }
+
+  private refreshStats(world: World) {
+    world
+      .stats()
+      .then(({ population, mass }) => {
+        if (world === this.world) this.update({ population, mass })
+      })
+      .catch(this.report)
+  }
+
+  private report = (error: unknown) => {
+    if (isEngineError(error, 'disposed') || isEngineError(error, 'contextLost')) return
+    this.update({ error: describe(error) })
   }
 
   private withWorld(action: (world: World) => void) {
@@ -192,7 +228,12 @@ export class Preview {
   }
 
   private update(patch: Partial<Snapshot>) {
-    this.snapshot = { ...this.snapshot, generation: this.world?.generation ?? 0, ...patch }
+    this.snapshot = {
+      ...this.snapshot,
+      generation: this.world?.generation ?? 0,
+      stepTime: this.world?.stepTime ?? null,
+      ...patch,
+    }
     for (const listener of this.listeners) listener()
   }
 }

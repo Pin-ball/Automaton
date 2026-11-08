@@ -1,3 +1,5 @@
+import { BenchResults } from '@src/dev/BenchResults.tsx'
+import { milliseconds } from '@src/dev/bench.ts'
 import { HEIGHT, Preview, WIDTH } from '@src/dev/preview.ts'
 import { cn } from '@src/lib/utils.ts'
 import { ruleNames } from '@src/rules/catalog.ts'
@@ -47,13 +49,19 @@ export function DevPreview() {
     preview.paint(x, y)
   }
 
+  const status = [
+    `${WIDTH}×${HEIGHT}`,
+    `generation ${snapshot.generation}`,
+    `population ${snapshot.population ?? '—'}`,
+    `mass ${snapshot.mass?.toFixed(1) ?? '—'}`,
+    `GPU ${milliseconds(snapshot.stepTime)}`,
+  ]
+
   return (
-    <main className="flex h-full flex-col items-center justify-center gap-4 p-6">
+    <main className="flex min-h-full flex-col items-center justify-center gap-4 p-6">
       <header className="flex w-full max-w-5xl items-baseline justify-between">
         <h1 className="font-medium">Engine preview</h1>
-        <p className="text-muted-foreground font-mono text-sm">
-          {WIDTH}×{HEIGHT} · generation {snapshot.generation}
-        </p>
+        <p className="text-muted-foreground font-mono text-sm">{status.join(' · ')}</p>
       </header>
 
       {snapshot.error ? (
@@ -96,6 +104,9 @@ export function DevPreview() {
         <Control onClick={() => preview.stepOnce()}>Step</Control>
         <Control onClick={() => preview.reseed()}>Reseed</Control>
         <Control onClick={() => preview.clear()}>Clear</Control>
+        <Control active={snapshot.benching} onClick={() => preview.runBench()}>
+          {snapshot.benching ? 'Benching…' : 'Bench'}
+        </Control>
         <label className="text-muted-foreground ml-auto flex items-center gap-2 font-mono text-sm">
           {snapshot.speed} steps/s
           <input
@@ -107,6 +118,10 @@ export function DevPreview() {
           />
         </label>
       </footer>
+
+      {(snapshot.benching || snapshot.bench.length > 0) && (
+        <BenchResults results={snapshot.bench} />
+      )}
     </main>
   )
 }

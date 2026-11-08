@@ -10,6 +10,8 @@ export const MAX_PAINT_OPS = 16
 
 export const MAX_ZONES = 8
 
+export const REDUCE_BLOCK = 4
+
 export const GROWTH: Record<Growth['kind'], number> = { counts: 0, bell: 1 }
 
 export const EDGE: Record<Edge, number> = { wrap: 0, wall: 1 }
@@ -30,6 +32,7 @@ export const DEFINES = [
   `#define MAX_RADIUS ${MAX_RADIUS}`,
   `#define MAX_PAINT_OPS ${MAX_PAINT_OPS}`,
   `#define MAX_ZONES ${MAX_ZONES}`,
+  `#define REDUCE_BLOCK ${REDUCE_BLOCK}`,
   `#define ALIVE ${ALIVE_THRESHOLD.toFixed(2)}`,
   `#define GROWTH_COUNTS ${GROWTH.counts}`,
   `#define EDGE_WRAP ${EDGE.wrap}`,

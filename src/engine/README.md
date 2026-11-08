@@ -44,6 +44,8 @@ Presets: `conway`, `bosco` (Larger than Life), `lenia`.
 | `unprotect(id)`                           | Removes a protected zone.                                |
 | `upload(rect, cells)`                     | Writes cells, row-major.                                 |
 | `readRegion(rect?)`                       | Reads cells asynchronously, without blocking the GPU.    |
+| `stats()`                                 | Population, mass and generation, one read at a time.     |
+| `stepTime`                                | GPU time of a recent step in ms, `null` if unknown.      |
 | `clear(start?)`, `dispose()`              | Empties the world (or resets it to `start`), frees it.   |
 
 A protected zone runs in its own private world and only while the world's rule is its rule; otherwise it sleeps and restarts intact when the rule comes back.

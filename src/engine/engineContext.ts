@@ -10,21 +10,24 @@ import fragment from '@src/engine/shaders/fragment.glsl?raw'
 import fullscreen from '@src/engine/shaders/fullscreen.vert?raw'
 import locked from '@src/engine/shaders/locked.glsl?raw'
 import paint from '@src/engine/shaders/paint.frag?raw'
+import reduce from '@src/engine/shaders/reduce.frag?raw'
 import step from '@src/engine/shaders/step.frag?raw'
 import type { Surface } from '@src/engine/types.ts'
 
 type Disposable = { dispose(): void }
 
-type Programs = { step: Program; paint: Program; adapt: Program; copy: Program }
+type Programs = { step: Program; paint: Program; adapt: Program; copy: Program; reduce: Program }
 
 function compileAll(gl: WebGL2RenderingContext): Programs {
-  const build = (...parts: string[]) =>
-    compileProgram(gl, fullscreen, [fragment, DEFINES, cells, ...parts].join('\n'))
+  const compile = (...parts: string[]) =>
+    compileProgram(gl, fullscreen, [fragment, DEFINES, ...parts].join('\n'))
+  const compileCells = (...parts: string[]) => compile(cells, ...parts)
   return {
-    step: build(step),
-    paint: build(locked, paint),
-    adapt: build(locked, adapt),
-    copy: build(copy),
+    step: compileCells(step),
+    paint: compileCells(locked, paint),
+    adapt: compileCells(locked, adapt),
+    copy: compileCells(copy),
+    reduce: compile(reduce),
   }
 }
 

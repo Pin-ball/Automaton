@@ -3,7 +3,7 @@ import { createEngine, presets } from '@src/engine/index.ts'
 import { gosperGun } from '@src/patterns/conway.ts'
 import { reseed } from '@src/rules/seeds.ts'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { liveCells, parseCell, place, scatter } from './helpers.ts'
+import { liveCells, parseCell, place, scatter, solid } from './helpers.ts'
 
 const GUN_RECT: Rect = { x: 20, y: 20, width: gosperGun.width, height: gosperGun.height }
 
@@ -41,7 +41,7 @@ describe('paint', () => {
 
   it('erases cells and their trail', async () => {
     const world = engine.createWorld({ width: 16, height: 16, rule: presets.conway })
-    place(world, 6, 6, ['OOOO', 'OOOO', 'OOOO', 'OOOO'])
+    place(world, 6, 6, solid(4, 4))
     world.paint([{ x: 8, y: 8, radius: 3, kind: 'erase' }])
     const { state, trail } = await world.readRegion()
     expect(state.every((value) => value === 0)).toBe(true)
@@ -141,7 +141,7 @@ describe('adapt', () => {
 
   it('never kills a live cell while thickening', async () => {
     const world = engine.createWorld({ width: 32, height: 32, rule: presets.conway })
-    place(world, 16, 16, ['O'])
+    place(world, 16, 16, solid(1, 1))
     world.adapt(presets.bosco)
     expect(await liveCells(world)).toContain('16,16')
   })

@@ -1,5 +1,6 @@
 import type { Engine, Rule } from '@src/engine/index.ts'
 import { createEngine, presets } from '@src/engine/index.ts'
+import { blinker, block, glider } from '@src/patterns/conway.ts'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   errorCode,
@@ -10,9 +11,8 @@ import {
   rejectionCode,
   scatter,
   shifted,
+  solid,
 } from './helpers.ts'
-
-const GLIDER = ['.O.', '..O', 'OOO']
 
 let canvas: HTMLCanvasElement
 let engine: Engine
@@ -34,7 +34,7 @@ function onLeftOrTop(cell: string): boolean {
 describe('Conway', () => {
   it('moves a glider by (1, 1) every 4 generations', async () => {
     const world = engine.createWorld({ width: 16, height: 16, rule: presets.conway })
-    place(world, 2, 2, GLIDER)
+    place(world, 2, 2, glider)
     const start = await liveCells(world)
     world.step(4)
     expect(await liveCells(world)).toEqual(shifted(start, 1, 1, 16))
@@ -43,7 +43,7 @@ describe('Conway', () => {
 
   it('flips a blinker with a period of 2', async () => {
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway })
-    place(world, 2, 3, ['OOO'])
+    place(world, 2, 3, blinker)
     const start = await liveCells(world)
     world.step()
     expect(await liveCells(world)).not.toEqual(start)
@@ -53,7 +53,7 @@ describe('Conway', () => {
 
   it('keeps a block still', async () => {
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway })
-    place(world, 3, 3, ['OO', 'OO'])
+    place(world, 3, 3, block)
     const start = await liveCells(world)
     world.step(5)
     expect(await liveCells(world)).toEqual(start)
@@ -63,7 +63,7 @@ describe('Conway', () => {
 describe('edges', () => {
   it('wraps a glider around the torus', async () => {
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway })
-    place(world, 5, 5, GLIDER)
+    place(world, 5, 5, glider)
     const start = await liveCells(world)
     world.step(32)
     expect(await liveCells(world)).toEqual(start)
@@ -75,7 +75,7 @@ describe('edges', () => {
       height: 12,
       rule: { ...presets.conway, edge: 'wall' },
     })
-    place(world, 6, 6, GLIDER)
+    place(world, 6, 6, glider)
     for (let i = 0; i < 40; i++) {
       world.step()
       expect((await liveCells(world)).filter(onLeftOrTop)).toEqual([])
@@ -195,7 +195,7 @@ describe('World', () => {
     const trailFade = { first: 0.5, decay: 0.25 }
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway, trailFade })
     const cell = { x: 3, y: 3, width: 1, height: 1 }
-    place(world, 3, 3, ['O'])
+    place(world, 3, 3, solid(1, 1))
     world.step()
     expect((await world.readRegion(cell)).trail[0]).toBeCloseTo(0.5, 3)
     world.step()
@@ -204,7 +204,7 @@ describe('World', () => {
 
   it('reads the generation it was asked for', async () => {
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway })
-    place(world, 2, 3, ['OOO'])
+    place(world, 2, 3, blinker)
     const pending = world.readRegion()
     world.step()
     const { state } = await pending
@@ -214,7 +214,7 @@ describe('World', () => {
 
   it('clears every cell, its trail and the generation', async () => {
     const world = engine.createWorld({ width: 8, height: 8, rule: presets.conway })
-    place(world, 3, 3, ['OO', 'OO'])
+    place(world, 3, 3, block)
     world.step(3)
     world.clear()
     const { state, trail } = await world.readRegion()

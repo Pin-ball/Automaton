@@ -2,6 +2,7 @@ import type { EngineErrorCode, World } from '@src/engine/index.ts'
 import { isEngineError } from '@src/engine/index.ts'
 import { ALIVE_THRESHOLD } from '@src/engine/shaders/defines.ts'
 import { randomSequence } from '@src/engine/world/random.ts'
+import type { Grid } from '@src/patterns/rle.ts'
 
 export function unitRandom(seed: number): () => number {
   const next = randomSequence(seed)
@@ -10,13 +11,12 @@ export function unitRandom(seed: number): () => number {
 
 type ScatterOptions = { size: number; density: number; seed: number; binary?: boolean }
 
-export function place(world: World, x: number, y: number, rows: readonly string[]) {
-  const width = Math.max(...rows.map((row) => row.length))
-  const state = new Float32Array(width * rows.length)
-  rows.forEach((row, dy) => {
-    for (const [dx, char] of [...row].entries()) if (char === 'O') state[dy * width + dx] = 1
-  })
-  world.upload({ x, y, width, height: rows.length }, { state })
+export function place(world: World, x: number, y: number, { width, height, state }: Grid) {
+  world.upload({ x, y, width, height }, { state })
+}
+
+export function solid(width: number, height: number): Grid {
+  return { width, height, state: new Float32Array(width * height).fill(1) }
 }
 
 export function fill(world: World) {

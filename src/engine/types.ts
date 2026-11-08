@@ -25,4 +25,6 @@ export type PaintKind = PaintOp['kind']
 
 export type ZoneOptions = z.input<typeof zoneOptionsSchema>
 
+export type Stats = { population: number; mass: number; generation: number }
+
 export type Region = { width: number; height: number; state: Float32Array; trail: Float32Array }

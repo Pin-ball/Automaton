@@ -4,6 +4,7 @@ import type { Program } from '@src/engine/gl/program.ts'
 import { bindProgram } from '@src/engine/gl/program.ts'
 import { readAttachmentsAsync } from '@src/engine/gl/readback.ts'
 import { TargetRing } from '@src/engine/gl/targets.ts'
+import { GpuTimer } from '@src/engine/gl/timer.ts'
 import type { Rule } from '@src/engine/rules/rule.ts'
 import { validateRule } from '@src/engine/rules/rule.ts'
 import { cellsSchema, stepCountSchema, worldOptionsSchema } from '@src/engine/schemas.ts'
@@ -13,6 +14,7 @@ import type {
   PaintOp,
   Rect,
   Region,
+  Stats,
   TrailFade,
   WorldOptions,
   ZoneOptions,
@@ -23,6 +25,7 @@ import { paintBatches } from '@src/engine/world/paint.ts'
 import { randomSequence } from '@src/engine/world/random.ts'
 import type { Point } from '@src/engine/world/rect.ts'
 import { checkRect } from '@src/engine/world/rect.ts'
+import { Reduction } from '@src/engine/world/reduction.ts'
 import { RuleResources } from '@src/engine/world/ruleResources.ts'
 import { ZoneSet } from '@src/engine/world/zones.ts'
 
@@ -41,11 +44,14 @@ export class World {
   private ring: TargetRing
   private resources: RuleResources
   private zones: ZoneSet
+  private timer: GpuTimer | null
+  private reduction: Reduction | null = null
+  private pendingStats: Promise<Stats> | null = null
   private nextRandom: () => number
   private generationCount = 0
   private disposed = false
 
-  constructor(ctx: EngineContext, options: WorldOptions) {
+  constructor(ctx: EngineContext, options: WorldOptions, timed = true) {
     ctx.assertUsable()
     const { width, height, rule, trailFade, seed } = parseInput(
       worldOptionsSchema,
@@ -72,10 +78,12 @@ export class World {
     this.zones = new ZoneSet({
       width,
       height,
-      createWorld: (zoneOptions) => new World(ctx, { ...zoneOptions, trailFade: this.trailFade }),
+      createWorld: (zoneOptions) =>
+        new World(ctx, { ...zoneOptions, trailFade: this.trailFade }, false),
       copyIn: (source, origin, to, alsoPrevious) => this.copyIn(source, origin, to, alsoPrevious),
       sink: (world, band) => world.clearBorder(band),
     })
+    this.timer = timed ? new GpuTimer(ctx.gl) : null
     ctx.register(this)
   }
 
@@ -91,6 +99,10 @@ export class World {
     return this.generationCount
   }
 
+  get stepTime(): number | null {
+    return this.timer?.milliseconds ?? null
+  }
+
   setRule(rule: Rule) {
     this.assertUsable()
     this.currentRule = validateRule(rule)
@@ -102,8 +114,13 @@ export class World {
     this.assertUsable()
     const steps = parseInput(stepCountSchema, count, 'step count')
     for (let i = 0; i < steps; i++) {
-      this.stepOnce()
-      this.zones.afterStep()
+      this.timer?.begin()
+      try {
+        this.stepOnce()
+        this.zones.afterStep()
+      } finally {
+        this.timer?.end()
+      }
     }
   }
 
@@ -177,6 +194,13 @@ export class World {
     }
   }
 
+  stats(): Promise<Stats> {
+    this.pendingStats ??= this.readStats().finally(() => {
+      this.pendingStats = null
+    })
+    return this.pendingStats
+  }
+
   clear(start?: Cells) {
     this.assertUsable()
     const { gl } = this.ctx
@@ -199,6 +223,16 @@ export class World {
     if (this.ctx.lost) return
     this.ring.dispose(this.ctx.gl)
     this.resources.dispose()
+    this.reduction?.dispose()
+    this.timer?.dispose()
+  }
+
+  private async readStats(): Promise<Stats> {
+    this.assertUsable()
+    const generation = this.generationCount
+    this.reduction ??= new Reduction(this.ctx, this.width, this.height)
+    const sums = await this.reduction.sum(this.ring.current.state, () => this.abortReason())
+    return { population: Math.round(sums[0] ?? 0), mass: sums[1] ?? 0, generation }
   }
 
   private abortReason(): Error | null {
